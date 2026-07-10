@@ -36,13 +36,7 @@ class DartaRepository:
         """
         return self.db.query(Darta).filter(Darta.darta_id == darta_id).all()
 
-    def create_darta(
-        self,
-        darta_data: dict,
-        issued_by_user: int,
-        file_path: str,
-        receiver_office: int
-    ) -> Darta:
+    def create_darta(self, darta_data: dict) -> Darta:
         """
         Create and persist a new darta record.
         """
@@ -53,6 +47,21 @@ class DartaRepository:
         self.db.refresh(new_darta)
 
         return new_darta
+    
+    def update_darta(self, id: int, darta_data: dict) -> Darta:
+        """
+        Updates the pre-existing darta record.
+        """
+        darta = self.get_darta_by_id(id)
+        if not darta:
+            return None
+        
+        for k, v in darta_data.items():
+            setattr(darta, k, v)
+            
+        self.db.commit()
+        self.db.refresh(darta)
+        return darta
     
     def get_dartas_by_filter(self, filters: dict) -> list[Darta]:
         """

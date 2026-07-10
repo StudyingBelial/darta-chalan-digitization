@@ -39,28 +39,33 @@ class ChalanRepository:
         """
         return self.db.query(Chalan).filter(Chalan.chalan_id == chalan_id).all()
 
-    def create_chalan(
-        self,
-        chalan_data: dict,
-        issued_by_user: int,
-        file_path: str,
-        sender_office: int
-    ) -> Chalan:
+    def create_chalan(self, chalan_data: dict) -> Chalan:
         """
         Create and persist a new chalan record.
         """
-        chalan_data.update({
-            "issued_by_user": issued_by_user,
-            "file_path" : file_path,
-            "sender_office" : sender_office,
-        })
-        new_chalan = Chalan(chalan_data)
+        new_chalan = Chalan(**chalan_data)
 
         self.db.add(new_chalan)
         self.db.commit()
         self.db.refresh(new_chalan)
 
         return new_chalan
+    
+    def update_chalan(self, id: int, chalan_data: dict) -> Chalan:
+        """
+        Updates pre exisitng chalan record.
+        """
+        chalan = self.get_chalan_by_id(id)
+
+        if not chalan:
+            return None
+        
+        for k, v in chalan_data.items():
+            setattr(chalan, k, v)
+            
+        self.db.commit()
+        self.db.refresh(chalan)
+        return chalan
     
     def get_chalans_by_filter(self, filters: dict) -> list[Chalan]:
         """
