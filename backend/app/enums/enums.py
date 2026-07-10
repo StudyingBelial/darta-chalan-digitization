@@ -16,3 +16,36 @@ class LOG_TYPE(Enum):
 class LOG_SOURCE(Enum):
     SYSTEM = "SYSTEM"
     USER = "USER"
+
+class PERMISSIONS(Enum):
+    USER_CREATE = "users:create"
+    USER_DISABLE = "users:disable"
+    USER_SEARCH = "users:search"
+    USER_SELF_UPDATE = "users:self_update"
+    USER_OTHER_UPDATE = "users:other_update"
+
+    LOG_VIEW = "logs:view"
+
+    OFFICE_CREATE = "offices:create"
+    OFFICE_UPDATE = "offices:update"
+    OFFICE_SEARCH = "offices:search"
+
+    DEPARTMENT_CREATE = "departments:create"
+    DEPARTMENT_UPDATE = "departments:update"
+    DEPARTMENT_SEARCH = "departments:search"
+
+    FINANCIAL_YEAR_CREATE = "financial_year:create"
+    FINANCIAL_YEAR_UPDATE = "financial_year:update"
+    FINANCIAL_YEAR_SEARCH = "financial_year:search"
+
+    OFFICER_CREATE = "officers:create"
+    OFFICER_UPDATE = "officers:update"
+    OFFICER_SEARCH = "officers:search"
+
+    DARTA_CREATE = "darta:create"
+    DARTA_UPDATE =  "darta:update"
+    DARTA_SEARCH = "darta:search"
+
+    CHALAN_CREATE = "chalan:create"
+    CHALAN_UPDATE = "chalan:update"
+    CHALAN_SEARCH = "chalan:search"
