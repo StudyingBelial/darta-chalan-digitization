@@ -11,7 +11,7 @@ class Logs(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True)
     office_id = Column(Integer, ForeignKey("offices.id", ondelete="RESTRICT"), nullable=True)
     source = Column(Enum(LOG_SOURCE, name="log_source", native_enum=True), nullable=False)
-    timestamp = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+    timestamp = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     log_type = Column(Enum(LOG_TYPE, name="log_type", native_enum = True), nullable=False)
     message = Column(String, nullable=False)
 

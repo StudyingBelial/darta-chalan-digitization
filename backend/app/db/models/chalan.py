@@ -16,7 +16,7 @@ class Chalan(Base):
     chalan_date = Column(Date, nullable=False)
     topic = Column(String, nullable=True, default="None")
     file_name = Column(String, nullable=False, unique=True)
-    timestamp = Column(TIMESTAMP, server_default=func.now(), nullable=False)
+    timestamp = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     file_path = Column(String, nullable=False, unique=True)
     sender_office = Column(Integer, ForeignKey("offices.id", ondelete="RESTRICT"))
     sender_department = Column(Integer, ForeignKey("departments.id", ondelete="RESTRICT"))
