@@ -1,3 +1,4 @@
+from backend.app.db.models import officers
 from sqlalchemy.orm import Session
 
 from backend.app.db import Offices
@@ -32,15 +33,11 @@ class OfficesRepository():
         """
         Create and persist a new office record.
         """
-        new_office = Offices(
-            name=office_data.name,
-            location=office_data.location,
-            is_disabled=False
-        )
-        self.db.add(new_office)
+        office = Offices(**office_data)
+        self.db.add(office)
         self.db.commit()
-        self.db.refresh(new_office)
-        return new_office
+        self.db.refresh(office)
+        return office
     
     def update_office(self, id: int, office_data: dict) -> Offices | None:
         """
