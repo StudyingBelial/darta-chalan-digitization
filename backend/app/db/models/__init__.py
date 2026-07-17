@@ -6,3 +6,4 @@ from .logs import Logs
 from .officers import Officers
 from .offices import Offices
 from .users import Users
+from .refresh_token import RefreshToken
