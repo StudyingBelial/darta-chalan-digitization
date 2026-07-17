@@ -31,3 +31,13 @@ ROLE_PREMISSIONS = {
 
     USER_TYPE.SYSTEM_ADMIN : list(PERMISSIONS)
     }
+
+def has_permission(user, permission: PERMISSIONS) -> bool:
+    """
+    Check if a user has a specific permission.
+    Returns True if the user is active and has the permission, False otherwise.
+    """
+    if not user or getattr(user, "is_disabled", False):
+        return False
+    allowed = ROLE_PREMISSIONS.get(user.user_type, [])
+    return permission in allowed
