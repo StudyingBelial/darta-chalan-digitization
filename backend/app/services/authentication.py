@@ -14,7 +14,8 @@ from backend.app.schemas import (
     UserLogin,
     ChangeSelfPassword,
     ChangeOtherPassword,
-    UserCreate
+    UserCreate,
+    FilterUserSearch
 )
 from backend.app.repositories import UsersRepository
 
@@ -128,3 +129,20 @@ class AuthenticationService:
         data["password"] = hash_password(user_data.password)
         
         return self.user_repo.create_user(data)
+
+    def change_user_status(self, admin_user: Users, user_id: int, user_status: bool) -> Users:
+        """
+        Allow an admin to enable or disable a user.
+        """
+        self._check_permission(admin_user, PERMISSIONS.USER_DISABLE)
+        updated_user = self.user_repo.change_user_status(user_id, user_status)
+        if not updated_user:
+            raise ValueError("User not found")
+        return updated_user
+
+    def search_users(self, admin_user: Users, filters: FilterUserSearch) -> list[Users]:
+        """
+        Allow an admin to search users using filters.
+        """
+        self._check_permission(admin_user, PERMISSIONS.USER_SEARCH)
+        return self.user_repo.get_users_by_filter(filters.model_dump(exclude_unset=True))
