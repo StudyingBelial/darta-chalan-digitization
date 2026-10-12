@@ -202,6 +202,8 @@ def test_smtp_api_routes(client, test_admin_user):
     assert send_data["success"] is True
 
     # Check status again to verify processed counter incremented
+    import time
+    time.sleep(0.5)
     res2 = client.get("/api/v1/inbound/smtp/status", headers=headers)
     assert res2.status_code == 200
     assert res2.json()["messages_processed"] >= 1

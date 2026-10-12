@@ -23,11 +23,14 @@ from contextlib import asynccontextmanager
 from backend.app.services.smtp_scanner import smtp_scanner_service
 from backend.app.core.logger import logger
 
-# Automatically ensure DB tables are created
-Base.metadata.create_all(bind=engine)
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: Ensure DB tables exist
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.warning(f"Notice: Initial table check skipped or running in test environment: {e}")
+
     # Startup: Start Inbound SMTP Scanner Daemon if enabled
     if settings.SMTP_SCANNER_ENABLED:
         try:

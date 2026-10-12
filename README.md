@@ -12,41 +12,45 @@ An enterprise-grade, production-ready full-stack system engineered specifically 
 
 ---
 
-## 🚀 Quick Start (Single-Command Hosting)
+## 🚀 Quick Start (Single-Command Docker Hosting)
 
-The platform includes a universal Python host runner script (`run_app.py`) that handles environment setup, database migrations, initial seeding, frontend verification, and unified Uvicorn server hosting.
+The platform runs exclusively via **Docker Compose**, orchestrating PostgreSQL 16, the FastAPI backend, and the React frontend (served via Nginx) with automated database migrations and administrator seeding.
 
 ### 1. Prerequisites
-- **Python 3.10+** (Tested on Python 3.10, 3.11, 3.12, 3.13)
-- **Node.js 18+** & **npm** (Required for compiling the frontend)
-- **Tesseract OCR** (Optional; required for scanned document text extraction)
+* **Docker Desktop** (with Docker Compose enabled)
 
-### 2. Install & Launch
+---
+
+### 2. Setup & Launch
+
+#### Step 1: Environment Configuration
+Copy `.env.example` to create your `.env` file:
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd darta-chalan-digitization
+# On Linux/macOS or Git Bash:
+cp .env.example .env
 
-# Create and activate virtual environment
-python -m venv venv
-# On Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-# On Linux/macOS:
-source venv/bin/activate
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Launch the entire application with one command
-python run_app.py
+# On Windows Command Prompt:
+copy .env.example .env
 ```
+*(On Windows, the optional local `setup.bat` script can also be used to automate environment preparation, Docker check, and firewall setup).*
 
-Upon launching, the system automatically:
-1. Creates `.env` from `.env.example` if not already present.
-2. Applies Alembic database migrations (`alembic upgrade head`).
-3. Seeds the initial organizational structure, active fiscal year, and default administrator account.
-4. Verifies/compiles the React production bundle (`frontend/dist`).
-5. Starts the unified server on **`http://localhost:8000`** and opens the web application in your browser.
+#### Step 2: Start the System
+```bash
+# Launch containers via Python runner (recommended):
+python run_app.py
+
+# Or start directly using Docker Compose:
+docker compose up --build
+```
+*(On Windows, the optional local `run.bat` helper can also be double-clicked).*
+
+The system will:
+1. Verify Docker Engine is running.
+2. Build and launch all containers (`ntc_digitization_db`, `ntc_digitization_backend`, `ntc_digitization_frontend`).
+3. Automatically apply Alembic migrations and seed initial master data.
+4. Detect and print your LAN network IP address (e.g. `http://192.168.1.31:3000`).
+5. Open your browser to the Web Portal at **`http://localhost:3000`**.
+6. Handle `Ctrl+C` for graceful container shutdown (`docker compose down`).
 
 ---
 
@@ -54,7 +58,8 @@ Upon launching, the system automatically:
 
 | Parameter | Value |
 | :--- | :--- |
-| **Portal URL** | [http://localhost:8000](http://localhost:8000) |
+| **Web Portal URL** | [http://localhost:3000](http://localhost:3000) (or `http://<SERVER_IP>:3000`) |
+| **REST API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) |
 | **Email** | `admin@ntc.net.np` |
 | **Password** | `Admin@123456` |
 | **Role Type** | `SYSTEM_ADMIN` |
@@ -63,26 +68,24 @@ Upon launching, the system automatically:
 
 ## 🛠️ CLI Options for `run_app.py`
 
-| Flag | Description | Default |
-| :--- | :--- | :--- |
-| `--host` | Host interface address to bind | `0.0.0.0` |
-| `--port` | Port number to listen on | `8000` |
-| `--dev` | Launch backend with concurrent Vite dev server on port `3000` | `False` |
-| `--reload` | Enable auto-reload on code modifications | `False` |
-| `--build-frontend` | Force a fresh build of the React frontend | `False` |
-| `--seed` | Force re-seeding of master data and admin account | `False` |
-| `--no-browser` | Prevent automatic opening of the web browser | `False` |
+| Flag | Description |
+| :--- | :--- |
+| `--down` | Stop and cleanly remove all running Docker containers |
+| `--logs` | View and follow real-time logs of running containers |
+| `--no-build` | Start containers without rebuilding images |
+| `--no-browser` | Do not automatically open the web browser |
+| `-d`, `--detach` | Start containers in the background |
 
 **Examples:**
 ```bash
-# Host on a custom port
-python run_app.py --port 8080
+# Start the system
+python run_app.py
 
-# Run in Development Mode with live hot-reloading
-python run_app.py --dev
+# Stop running containers
+python run_app.py --down
 
-# Force re-compile frontend and re-seed database
-python run_app.py --build-frontend --seed
+# View live container logs
+python run_app.py --logs
 ```
 
 ---

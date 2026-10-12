@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     PORT: int = int(os.getenv("PORT", os.getenv("APP_PORT", "8000")))
     
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./digitization.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://ntc_admin:ntc_secure_password_2081@localhost:5432/darta_chalan_db")
     
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "MY_SUPER_DUPER_SECRET_KEY_REPLACE_IN_PROD")

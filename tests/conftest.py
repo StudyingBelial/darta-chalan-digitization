@@ -98,13 +98,22 @@ def client(db_session):
     from fastapi.testclient import TestClient
     from backend.app.main import app
     from backend.app.db.base import get_db
+    from backend.app.services.smtp_scanner import smtp_scanner_service
+    from contextlib import contextmanager
 
     def _override_get_db():
         yield db_session
 
+    @contextmanager
+    def _override_scanner_session():
+        yield db_session
+
+    old_factory = smtp_scanner_service.session_factory
+    smtp_scanner_service.session_factory = _override_scanner_session
     app.dependency_overrides[get_db] = _override_get_db
     with TestClient(app) as c:
         yield c
     app.dependency_overrides.clear()
+    smtp_scanner_service.session_factory = old_factory
 
 
