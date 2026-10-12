@@ -9,6 +9,10 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Darta-Chalan Digitization System"
     VERSION: str = "1.0.0"
     
+    # Server Binding
+    HOST: str = os.getenv("HOST", os.getenv("APP_HOST", "0.0.0.0"))
+    PORT: int = int(os.getenv("PORT", os.getenv("APP_PORT", "8000")))
+    
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./digitization.db")
     

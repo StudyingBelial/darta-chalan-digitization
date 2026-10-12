@@ -14,6 +14,7 @@ import subprocess
 import webbrowser
 import threading
 import time
+import socket
 from pathlib import Path
 
 if sys.platform == "win32":
@@ -32,19 +33,38 @@ FRONTEND_DIR = ROOT_DIR / "frontend"
 FRONTEND_DIST = FRONTEND_DIR / "dist"
 STORAGE_DIR = ROOT_DIR / "storage"
 
+def get_local_ip() -> str:
+    """Detect LAN / local network IP address of this machine."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.3)
+        # Does not actually transmit packets, used to determine default outbound route
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
 def print_banner(host: str, port: int, mode: str = "Production (Unified)"):
-    display_host = "localhost" if host in ("0.0.0.0", "127.0.0.1") else host
+    local_ip = get_local_ip()
     smtp_port = os.getenv("SMTP_SCANNER_PORT", "1025")
+    is_wildcard = host in ("0.0.0.0", "", "::")
+    
     print("\n" + "=" * 76)
     print("  [NTC] NEPAL TELECOM CORPORATION")
     print("  Darta-Chalan Digitization System (दर्ता-चलानी डिजिटल प्रणाली)")
     print("=" * 76)
     print(f"  * Running Mode       : {mode}")
-    print(f"  * Web Application   : http://{display_host}:{port}")
-    print(f"  * REST API Docs      : http://{display_host}:{port}/docs")
-    print(f"  * ReDoc Explorer     : http://{display_host}:{port}/redoc")
-    print(f"  * System Health Check: http://{display_host}:{port}/health")
-    print(f"  * SMTP Scanner Intake: smtp://{display_host}:{smtp_port} (Canon/MFP Scan-to-Email)")
+    print(f"  * Localhost Access   : http://localhost:{port}")
+    if is_wildcard:
+        print(f"  * Network Access     : http://{local_ip}:{port}  (Share this on LAN / Remote)")
+    else:
+        print(f"  * Network Access     : http://{host}:{port}")
+    print(f"  * REST API Docs      : http://localhost:{port}/docs")
+    print(f"  * ReDoc Explorer     : http://localhost:{port}/redoc")
+    print(f"  * System Health Check: http://localhost:{port}/health")
+    print(f"  * SMTP Scanner Intake: smtp://{local_ip if is_wildcard else host}:{smtp_port}")
     print("-" * 76)
     print("  Default System Administrator Credentials:")
     print("     * Email    : admin@ntc.net.np")
@@ -211,11 +231,34 @@ def run_production_server(host: str, port: int, reload: bool, open_browser: bool
     )
 
 def main():
+    # 1. Ensure .env exists
+    check_and_setup_env()
+
+    # Read host and port configuration from .env if present
+    env_file = ROOT_DIR / ".env"
+    default_host = "0.0.0.0"
+    default_port = 8000
+    if env_file.exists():
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#"):
+                        continue
+                    if line.startswith("HOST=") or line.startswith("APP_HOST="):
+                        default_host = line.split("=", 1)[1].strip().strip('"').strip("'")
+                    elif line.startswith("PORT=") or line.startswith("APP_PORT="):
+                        val = line.split("=", 1)[1].strip().strip('"').strip("'")
+                        if val.isdigit():
+                            default_port = int(val)
+        except Exception:
+            pass
+
     parser = argparse.ArgumentParser(
         description="Host the complete NTC Darta-Chalan Digitization System"
     )
-    parser.add_argument("--host", default="0.0.0.0", help="Host address to bind (default: 0.0.0.0)")
-    parser.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
+    parser.add_argument("--host", default=default_host, help=f"Host address to bind (default: {default_host})")
+    parser.add_argument("--port", type=int, default=default_port, help=f"Port to listen on (default: {default_port})")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload on code change")
     parser.add_argument("--dev", action="store_true", help="Run with concurrent Vite dev server on port 3000")
     parser.add_argument("--build-frontend", action="store_true", help="Force rebuild frontend production bundle")
@@ -223,9 +266,6 @@ def main():
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open web browser")
 
     args = parser.parse_args()
-
-    # 1. Ensure .env
-    check_and_setup_env()
 
     # 2. Ensure storage directories
     ensure_storage_directories()

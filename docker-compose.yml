@@ -8,8 +8,8 @@ services:
     container_name: ntc_digitization_backend
     restart: unless-stopped
     ports:
-      - "8000:8000"
-      - "1025:1025"
+      - "${PORT:-8000}:8000"
+      - "${SMTP_SCANNER_PORT:-1025}:1025"
     environment:
       - PROJECT_NAME=Nepal Telecom Darta-Chalan Digitization System
       - DATABASE_URL=sqlite:////app/data/digitization.db
@@ -42,7 +42,7 @@ services:
     container_name: ntc_digitization_frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
       backend:
         condition: service_healthy

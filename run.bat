@@ -35,8 +35,17 @@ if exist ".venv\Scripts\activate.bat" (
     set PYTHON_CMD=python
 )
 
+:: Check if first argument is a plain port number (e.g. "run.bat 9000")
+set "EXTRA_ARGS=%*"
+if not "%~1"=="" (
+    echo %~1| findstr /r "^[0-9][0-9]*$" >nul
+    if not errorlevel 1 (
+        set "EXTRA_ARGS=--port %~1 %2 %3 %4 %5"
+    )
+)
+
 :: Run the universal runner file
-%PYTHON_CMD% run_app.py %*
+%PYTHON_CMD% run_app.py %EXTRA_ARGS%
 
 if %ERRORLEVEL% NEQ 0 (
     echo.
