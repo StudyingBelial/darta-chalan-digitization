@@ -256,3 +256,6 @@ storage/logs/*
 *.njsproj
 *.sln
 *.sw?
+
+# Local Windows batch helper scripts (user personal system runners)
+*.bat
