@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, TIMESTAMP, Date, func
-from sqlalchemy import text
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, TIMESTAMP, Date, func
 from sqlalchemy.orm import relationship
 from backend.app.db.base import Base
 
@@ -13,11 +12,14 @@ class Darta(Base):
     sender_email = Column(String, nullable=False)
     sender_contact_number = Column(String, nullable=True)
     darta_date = Column(Date, nullable=False)
+    darta_date_bs = Column(String, nullable=True)
     financial_year = Column(Integer, ForeignKey("financial_year.id", ondelete="RESTRICT"))
     topic = Column(String, nullable=False)
     file_name = Column(String, nullable=False, unique=True)
     timestamp = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
     file_path = Column(String, nullable=False, unique=True)
+    extracted_ocr_text = Column(Text, nullable=True)
+    status = Column(String, nullable=False, default="REGISTERED")
     receiver_office = Column(Integer, ForeignKey("offices.id", ondelete="RESTRICT"))
     receiver_department = Column(Integer, ForeignKey("departments.id", ondelete="RESTRICT"))
     receiver_officer = Column(Integer, ForeignKey("officers.id", ondelete="RESTRICT"))

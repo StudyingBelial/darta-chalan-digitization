@@ -2,17 +2,55 @@ from pydantic import BaseModel, model_validator
 from typing import Optional, Literal
 from datetime import date
 
+from fastapi import Form
+
 class CreateChalan(BaseModel):
-    chalan_id: int
+    chalan_id: Optional[int] = None
     sender_email: str
     receiver: str
     receiver_email: str
     receiver_contact_number: Optional[str] = None
     chalan_date: date
+    chalan_date_bs: Optional[str] = None
     topic: str
-    file_name: str
-    sender_department: int
-    sender_officer: int
+    file_name: Optional[str] = None
+    sender_department: Optional[int] = None
+    sender_officer: Optional[int] = None
+    extracted_ocr_text: Optional[str] = None
+    status: Optional[str] = "REGISTERED"
+
+    @classmethod
+    def as_form(
+        cls,
+        sender_email: str = Form(...),
+        receiver: str = Form(...),
+        receiver_email: str = Form(...),
+        chalan_date: date = Form(...),
+        topic: str = Form(...),
+        chalan_id: Optional[int] = Form(None),
+        receiver_contact_number: Optional[str] = Form(None),
+        chalan_date_bs: Optional[str] = Form(None),
+        file_name: Optional[str] = Form(None),
+        sender_department: Optional[int] = Form(None),
+        sender_officer: Optional[int] = Form(None),
+        extracted_ocr_text: Optional[str] = Form(None),
+        status: Optional[str] = Form("REGISTERED"),
+    ):
+        return cls(
+            chalan_id=chalan_id,
+            sender_email=sender_email,
+            receiver=receiver,
+            receiver_email=receiver_email,
+            receiver_contact_number=receiver_contact_number,
+            chalan_date=chalan_date,
+            chalan_date_bs=chalan_date_bs,
+            topic=topic,
+            file_name=file_name,
+            sender_department=sender_department,
+            sender_officer=sender_officer,
+            extracted_ocr_text=extracted_ocr_text,
+            status=status,
+        )
 
 class ReceiverResponse(BaseModel):
     name: str
@@ -27,10 +65,14 @@ class SenderResponse(BaseModel):
     officer: Optional[str] = None
 
 class ChalanResponse(BaseModel):
+    id: Optional[int] = None
     chalan_id: int
     chalan_date: date
+    chalan_date_bs: Optional[str] = None
     topic: str
     file_name: str
+    extracted_ocr_text: Optional[str] = None
+    status: Optional[str] = "REGISTERED"
     receiver: ReceiverResponse
     sender: SenderResponse
 
@@ -61,10 +103,14 @@ class ChalanResponse(BaseModel):
             }
             
             return {
+                "id": getattr(data, "id", None),
                 "chalan_id": getattr(data, "chalan_id", None),
                 "chalan_date": getattr(data, "chalan_date", None),
+                "chalan_date_bs": getattr(data, "chalan_date_bs", None),
                 "topic": getattr(data, "topic", None),
                 "file_name": getattr(data, "file_name", None),
+                "extracted_ocr_text": getattr(data, "extracted_ocr_text", None),
+                "status": getattr(data, "status", "REGISTERED"),
                 "receiver": receiver_data,
                 "sender": sender_data
             }
@@ -78,10 +124,14 @@ class FilterChalanSearch(BaseModel):
     receiver_email: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    from_date_bs: Optional[str] = None
+    to_date_bs: Optional[str] = None
     topic: Optional[str] = None
     sender_office: Optional[int] = None
     sender_department: Optional[int] = None
     sender_officer: Optional[int] = None
     issued_by_user: Optional[int] = None
+    status: Optional[str] = None
+    ocr_keyword: Optional[str] = None
     order_by: Optional[str] = "id"
-    order_direction: Literal["asc", "desc"] = "desc"
+    order_direction: Literal["asc", "desc"] = "desc"

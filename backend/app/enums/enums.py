@@ -17,6 +17,14 @@ class LOG_SOURCE(Enum):
     SYSTEM = "SYSTEM"
     USER = "USER"
 
+class DOCUMENT_STATUS(Enum):
+    REGISTERED = "REGISTERED"
+    FORWARDED = "FORWARDED"
+    UNDER_REVIEW = "UNDER_REVIEW"
+    ACTION_TAKEN = "ACTION_TAKEN"
+    COMPLETED = "COMPLETED"
+    ARCHIVED = "ARCHIVED"
+
 class PERMISSIONS(Enum):
     USER_CREATE = "users:create"
     USER_DISABLE = "users:disable"
@@ -43,9 +51,14 @@ class PERMISSIONS(Enum):
     OFFICER_SEARCH = "officers:search"
 
     DARTA_CREATE = "darta:create"
-    DARTA_UPDATE =  "darta:update"
+    DARTA_UPDATE = "darta:update"
     DARTA_SEARCH = "darta:search"
+    DARTA_FORWARD = "darta:forward"
 
     CHALAN_CREATE = "chalan:create"
     CHALAN_UPDATE = "chalan:update"
     CHALAN_SEARCH = "chalan:search"
+    CHALAN_FORWARD = "chalan:forward"
+
+    DOCUMENT_OCR = "document:ocr"
+    DOCUMENT_DOWNLOAD = "document:download"

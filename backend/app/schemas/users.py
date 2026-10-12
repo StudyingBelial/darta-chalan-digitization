@@ -23,7 +23,7 @@ class ChangeSelfPassword(BaseModel):
     new_password : str
 
 class ChangeOtherPassword(BaseModel):
-    user_id: int
+    user_id: Optional[int] = None
     new_password: str
 
 class UserUpdateOther(BaseModel):
@@ -31,7 +31,7 @@ class UserUpdateOther(BaseModel):
     email: Optional[EmailStr] = None
     user_type: Optional[USER_TYPE] = None
     user_office: Optional[int] = None
-    is_disabled: Optional[int] = None
+    is_disabled: Optional[bool] = None
 
 class UserUpdateOtherStatus(BaseModel):
     user_id: int
@@ -52,6 +52,7 @@ class UserResponse(BaseModel):
     full_name: str
     email: EmailStr
     user_type: USER_TYPE
+    user_office: Optional[int] = None
     is_disabled: bool
 
     model_config = {"from_attributes": True}

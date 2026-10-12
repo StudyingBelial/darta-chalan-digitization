@@ -5,10 +5,12 @@ import secrets
 from sqlalchemy.orm import Session
 from backend.app.repositories import RefreshTokenRepository
 
-SECRET_KEY = "MY_SUPER_DUPER_SECRET_KEY"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15 # Add an inactivity timer in the background that makes the users inactive
-REFRESH_TOKEN_EXPIRE_HOURS = 12
+from backend.app.core.config import settings
+
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+REFRESH_TOKEN_EXPIRE_HOURS = settings.REFRESH_TOKEN_EXPIRE_HOURS
 
 def hash_password(password: str) -> str:
     """

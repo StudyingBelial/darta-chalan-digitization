@@ -17,7 +17,7 @@ CHALAN_ORDER_MAP = {
     "file_path" : Chalan.file_path,
     "sender_office" : Chalan.sender_office,
     "sender_department" : Chalan.sender_department,
-    "sender_officer" : Chalan.sender_office
+    "sender_officer" : Chalan.sender_officer
 }
 
 class ChalanRepository:
@@ -45,11 +45,11 @@ class ChalanRepository:
         """
         new_chalan = Chalan(**chalan_data)
 
-        self.db.add(new_chalan)
+        self.db.add(new_alan := new_chalan)
         self.db.commit()
-        self.db.refresh(new_chalan)
+        self.db.refresh(new_alan)
 
-        return new_chalan
+        return new_alan
     
     def update_chalan(self, id: int, chalan_data: dict) -> Chalan:
         """
@@ -79,7 +79,8 @@ class ChalanRepository:
             "issued_by_user" : Chalan.issued_by_user,
             "sender_office" : Chalan.sender_office,
             "sender_department" : Chalan.sender_department,
-            "sender_officer" : Chalan.sender_officer
+            "sender_officer" : Chalan.sender_officer,
+            "status" : Chalan.status,
         }
 
         ilike_filters = {
@@ -98,11 +99,20 @@ class ChalanRepository:
             if (value := filters.get(key)) is not None:
                 query = query.filter(column.ilike(f"%{value}%"))
 
+        if (ocr_kw := filters.get("ocr_keyword")) is not None:
+            query = query.filter(Chalan.extracted_ocr_text.ilike(f"%{ocr_kw}%"))
+
         if filters.get("start_date") is not None:
             query = query.filter(Chalan.chalan_date >= filters["start_date"])
 
         if filters.get("end_date") is not None:
             query = query.filter(Chalan.chalan_date <= filters["end_date"])
+
+        if filters.get("from_date_bs") is not None:
+            query = query.filter(Chalan.chalan_date_bs >= filters["from_date_bs"])
+
+        if filters.get("to_date_bs") is not None:
+            query = query.filter(Chalan.chalan_date_bs <= filters["to_date_bs"])
 
         order_col = CHALAN_ORDER_MAP.get(filters.get("order_by"), Chalan.id)
         direction = filters.get("order_direction", "desc")

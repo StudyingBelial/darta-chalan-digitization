@@ -216,3 +216,43 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ==============================================================================
+# Project-Specific Production Exclusions (Darta-Chalan Digitization System)
+# ==============================================================================
+# Node dependencies and build artifacts
+node_modules/
+**/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.cache/
+
+# Local databases and SQLite journals
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite3-journal
+digitization.db
+
+# Storage & Uploads (exclude user uploads and audit log files, keep directory structure)
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Local environment configuration (keep .env.example only)
+.env
+.env.local
+.env.*.local
+
+# IDE & Editor artifacts
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

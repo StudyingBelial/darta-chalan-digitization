@@ -5,7 +5,7 @@ from backend.app.db import Darta
 DARTA_ORDER_MAP = {
     "id" : Darta.id,
     "darta_id" : Darta.darta_id,
-    "issused_by_user" : Darta.issued_by_user,
+    "issued_by_user" : Darta.issued_by_user,
     "sender" : Darta.sender,
     "sender_email" : Darta.sender_email,
     "sender_contact_number" : Darta.sender_contact_number,
@@ -72,11 +72,12 @@ class DartaRepository:
         exact_filter = {
             "id" : Darta.id,
             "darta_id" : Darta.darta_id,
-            "issused_by_user" : Darta.issued_by_user,
+            "issued_by_user" : Darta.issued_by_user,
             "financial_year" : Darta.financial_year,
             "receiver_office" : Darta.receiver_office,
             "receiver_officer" : Darta.receiver_officer,
-            "receiver_department" : Darta.receiver_department
+            "receiver_department" : Darta.receiver_department,
+            "status" : Darta.status,
         }
 
         ilike_filter = {
@@ -94,11 +95,20 @@ class DartaRepository:
             if (value := filters.get(key)) is not None:
                 query = query.filter(column.ilike(f"%{value}%"))
 
+        if (ocr_kw := filters.get("ocr_keyword")) is not None:
+            query = query.filter(Darta.extracted_ocr_text.ilike(f"%{ocr_kw}%"))
+
         if filters.get("start_date") is not None:
             query = query.filter(Darta.darta_date >= filters["start_date"])
 
         if filters.get("end_date") is not None:
             query = query.filter(Darta.darta_date <= filters["end_date"])
+
+        if filters.get("from_date_bs") is not None:
+            query = query.filter(Darta.darta_date_bs >= filters["from_date_bs"])
+
+        if filters.get("to_date_bs") is not None:
+            query = query.filter(Darta.darta_date_bs <= filters["to_date_bs"])
 
         order_col = DARTA_ORDER_MAP.get(filters.get("order_by"), Darta.id)
         direction = filters.get("order_direction", "desc")
