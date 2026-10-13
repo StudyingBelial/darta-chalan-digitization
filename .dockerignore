@@ -10,7 +10,12 @@ htmlcov
 .env
 tests
 dist
+**/dist
 node_modules
+**/node_modules
+venv
+.venv
+storage
 *.log
 .vscode
 .idea

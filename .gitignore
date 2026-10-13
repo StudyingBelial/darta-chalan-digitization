@@ -259,6 +259,8 @@ storage/logs/*
 
 # Local Windows batch helper scripts (user personal system runners)
 *.bat
+!run.bat
+!setup.bat
 
 # Documentation guides (local offline documentation)
 *_GUIDE.md

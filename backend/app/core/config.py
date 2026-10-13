@@ -1,9 +1,11 @@
 import os
 try:
     from pydantic_settings import BaseSettings, SettingsConfigDict
+    from pydantic import field_validator
 except ImportError:
     from pydantic import BaseModel as BaseSettings
     SettingsConfigDict = None
+    field_validator = None
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Darta-Chalan Digitization System"
@@ -14,7 +16,18 @@ class Settings(BaseSettings):
     PORT: int = int(os.getenv("PORT", os.getenv("APP_PORT", "8000")))
     
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://ntc_admin:ntc_secure_password_2081@localhost:5432/darta_chalan_db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql+psycopg2://ntc_admin:ntc_secure_password_2081@localhost:5432/darta_chalan_db")
+
+    if field_validator:
+        @field_validator("DATABASE_URL", mode="after")
+        @classmethod
+        def normalize_database_url(cls, v: str) -> str:
+            if isinstance(v, str):
+                if v.startswith("postgresql://"):
+                    return v.replace("postgresql://", "postgresql+psycopg2://", 1)
+                elif v.startswith("postgres://"):
+                    return v.replace("postgres://", "postgresql+psycopg2://", 1)
+            return v
     
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "MY_SUPER_DUPER_SECRET_KEY_REPLACE_IN_PROD")
