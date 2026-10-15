@@ -1,0 +1,96 @@
+# ==============================================================================
+# Nepal Telecom Corporation (NTC) — Darta-Chalan Digitization System
+# Docker Compose: Production & Public-Facing Intranet / Internet Deployment
+# ==============================================================================
+# Usage:
+#   1. Generate SSL certificates:
+#        scripts\generate_intranet_ssl.bat  (or place fullchain.pem & privkey.pem into certs/)
+#   2. Launch public-facing containers:
+#        docker compose -f docker-compose.public.yml up -d --build
+# ==============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ntc_digitization_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-darta_chalan_db}
+      POSTGRES_USER: ${POSTGRES_USER:-ntc_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ntc_secure_password_2081}
+    ports:
+      # Isolated to 127.0.0.1 on port 5433 (avoids conflicts with host PostgreSQL on 5432)
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ntc_admin} -d ${POSTGRES_DB:-darta_chalan_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: ntc_digitization_backend
+    restart: always
+    ports:
+      # Inbound SMTP Scanner for Canon/MFP network hardware scanners
+      - "0.0.0.0:${SMTP_SCANNER_PORT:-1025}:1025"
+      # Direct REST API port (accessible across intranet)
+      - "0.0.0.0:${PORT:-8000}:8000"
+    environment:
+      - PROJECT_NAME=Nepal Telecom Darta-Chalan Digitization System
+      - DATABASE_URL=postgresql+psycopg2://${POSTGRES_USER:-ntc_admin}:${POSTGRES_PASSWORD:-ntc_secure_password_2081}@db:5432/${POSTGRES_DB:-darta_chalan_db}
+      - SECRET_KEY=${SECRET_KEY:-ntc_digitization_production_secret_key_2081_change_me}
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=120
+      - REFRESH_TOKEN_EXPIRE_HOURS=24
+      - UPLOAD_DIR=/app/storage/uploads
+      - CORS_ORIGINS=["*"]
+      - SMTP_SCANNER_ENABLED=${SMTP_SCANNER_ENABLED:-true}
+      - SMTP_SCANNER_HOST=0.0.0.0
+      - SMTP_SCANNER_PORT=1025
+      - SMTP_SCANNER_ALLOWED_DOMAINS=${SMTP_SCANNER_ALLOWED_DOMAINS:-ntc.net.np,gov.np}
+    volumes:
+      - backend_uploads:/app/storage/uploads
+      - backend_logs:/app/storage/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: ntc_digitization_frontend
+    restart: always
+    ports:
+      # Standard HTTP port (auto redirects to HTTPS)
+      - "0.0.0.0:${HTTP_PORT:-80}:80"
+      # Standard Secure HTTPS port
+      - "0.0.0.0:${HTTPS_PORT:-443}:443"
+    volumes:
+      # Mount production SSL Nginx configuration directory
+      - ./deploy/nginx:/etc/nginx/conf.d:ro
+      # Mount SSL certificates (fullchain.pem, privkey.pem)
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+    name: ntc_digitization_postgres_data
+  backend_uploads:
+    name: ntc_digitization_uploads
+  backend_logs:
+    name: ntc_digitization_logs
