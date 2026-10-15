@@ -1,0 +1,24 @@
+# ==============================================================================
+# Nepal Telecom Corporation (NTC) — Darta-Chalan Digitization System
+# Docker Compose: Zero-Config Public Internet Access via Cloudflare Tunnel
+# ==============================================================================
+# This enables public internet access WITHOUT port forwarding or public static IP.
+#
+# Free Quick Tunnel Usage (No account needed):
+#   docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d
+#   docker compose logs cloudflare-tunnel
+#
+# Named Production Tunnel Usage (With your custom domain e.g. darta.ntc.net.np):
+#   Set CLOUDFLARE_TUNNEL_TOKEN in your .env file
+# ==============================================================================
+
+services:
+  cloudflare-tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: ntc_digitization_tunnel
+    command: ${CLOUDFLARE_TUNNEL_CMD:-tunnel --no-autoupdate --url http://frontend:80}
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      frontend:
+        condition: service_started
