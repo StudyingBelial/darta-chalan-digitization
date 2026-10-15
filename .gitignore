@@ -271,3 +271,4 @@ storage/logs/*
 # Documentation guides (local offline documentation)
 *_GUIDE.md
 HOW_TO_RUN_AND_DEPLOY.md
+docs/INTERNSHIP_*.md

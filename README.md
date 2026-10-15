@@ -12,6 +12,17 @@ An enterprise-grade, production-ready full-stack system engineered specifically 
 
 ---
 
+## 📚 Documentation & Operational Manuals
+
+| Guide | Description | Target Audience |
+| :--- | :--- | :--- |
+| **[Administrator Operations & Setup Manual](docs/ADMIN_HOWTO.md)** | Complete setup, inbound ESMTP scanner configuration, hardware bridge, RBAC, master data, and SSL deployment. | System & Office Admins |
+| **[User & Operator Manual](docs/USER_HOWTO.md)** | Step-by-step instructions for Darta registration, Canon scanning, Chalan dispatch, OCR search, and forwarding. | Desk Clerks, Staff Officers |
+| **[Login Credentials & System Keys](docs/LOGIN_CREDENTIALS.md)** | Directory of all default accounts, test credentials, database access, SMTP socket parameters, and password recovery. | Admins, Developers, Testers |
+| **[Flow Architecture & UML Specification](docs/FLOW_ARCHITECTURE_UML.md)** | Mermaid & PlantUML sequence diagrams, state machines, and complete ERD database schema ready for diagramming tools. | Technical Leads, Evaluators |
+
+---
+
 ## 🚀 Quick Start (Single-Command Docker Hosting)
 
 The platform runs exclusively via **Docker Compose**, orchestrating PostgreSQL 16, the FastAPI backend, and the React frontend (served via Nginx) with automated database migrations and administrator seeding.
