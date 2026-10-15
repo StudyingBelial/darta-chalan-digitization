@@ -167,14 +167,54 @@ The platform is fully containerized with multi-stage Docker builds.
 ### Run with Docker Compose
 ```bash
 # Build and start both Backend and Frontend containers
-docker-compose up --build -d
+docker compose up --build -d
 
 # View service logs
-docker-compose logs -f
+docker compose logs -f
 ```
 
-- **Frontend Application**: `http://localhost:3000`
-- **Backend API & Swagger Docs**: `http://localhost:8000/docs`
+- **Frontend Application**: `http://localhost:3000` (or `http://<LAN_IP>:3000`)
+- **Backend API & Swagger Docs**: `http://localhost:3000/docs` (or `http://localhost:8000/docs`)
+
+---
+
+## 🌐 Intranet (LAN) & Public-Facing Deployment
+
+The platform is designed to be shared across your local office network (intranet) or exposed securely to the public internet.
+
+### Option 1: Direct Office Intranet (LAN) Access (HTTP)
+1. **Configure Firewall** (Windows host):
+   Right-click `scripts/setup_firewall_rules.bat` and choose **Run as administrator** (or run `powershell -File scripts/setup_firewall_rules.ps1`).
+2. **Start Containers**:
+   ```bash
+   python run_app.py
+   ```
+3. **Share the Link**:
+   Colleagues on the same WiFi/Ethernet office network can access the portal directly using your machine's LAN IP:
+   `http://<YOUR_LAN_IP>:3000` (e.g. `http://192.168.1.15:3000`)
+   *(To use standard port 80 without typing `:3000`, set `FRONTEND_PORT=80` in your `.env` file).*
+
+### Option 2: Production Public-Facing Deployment with HTTPS / SSL (Ports 80 & 443)
+For secure intranet or internet deployments requiring HTTPS with automatic HTTP-to-HTTPS redirect:
+1. **Generate or Provide SSL Certificates**:
+   ```bash
+   # Automatically generate intranet certificates for your LAN IP & localhost:
+   python scripts/generate_ssl.py
+   # Or run: scripts\generate_intranet_ssl.bat
+   ```
+   *(For official public domains like `darta.ntc.net.np`, place your CA-signed `fullchain.pem` and `privkey.pem` into the `certs/` folder).*
+2. **Launch Public Containers**:
+   ```bash
+   docker compose -f docker-compose.public.yml up -d --build
+   ```
+3. Access securely at `https://<YOUR_LAN_IP>` or `https://<YOUR_DOMAIN>`.
+
+### Option 3: Zero-Config Public Internet Access (Cloudflare Tunnel)
+To access the system securely over the public internet without router port forwarding or static IP:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.cloudflare.yml up -d
+docker compose logs cloudflare-tunnel
+```
 
 ---
 
