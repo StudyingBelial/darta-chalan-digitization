@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { UserResponse, UserLogin } from '../types';
 import { authService } from '../services/apiServices';
+import { safeStorage } from '../utils/safeStorage';
 
 interface AuthContextType {
   user: UserResponse | null;
@@ -15,36 +16,59 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserResponse | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('access_token'));
+  const [token, setToken] = useState<string | null>(() => safeStorage.getItem('access_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    let isMounted = true;
+    const timeout = setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, 4000); // 4-second safety guard: never leave user hanging on loading screen
+
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('access_token');
-      if (storedToken) {
-        try {
-          const profile = await authService.getCurrentUser();
-          setUser(profile);
-          setToken(storedToken);
-        } catch (err) {
-          console.error('Failed to fetch user profile:', err);
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          setUser(null);
-          setToken(null);
+      try {
+        const storedToken = safeStorage.getItem('access_token');
+        if (storedToken) {
+          try {
+            const profile = await authService.getCurrentUser();
+            if (isMounted) {
+              setUser(profile);
+              setToken(storedToken);
+            }
+          } catch (err) {
+            console.warn('Failed to verify existing session:', err);
+            safeStorage.removeItem('access_token');
+            safeStorage.removeItem('refresh_token');
+            if (isMounted) {
+              setUser(null);
+              setToken(null);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Storage initialization error:', e);
+      } finally {
+        clearTimeout(timeout);
+        if (isMounted) {
+          setIsLoading(false);
         }
       }
-      setIsLoading(false);
     };
+
     initAuth();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
   }, []);
 
   const login = async (credentials: UserLogin) => {
     setIsLoading(true);
     try {
       const data = await authService.login(credentials);
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('refresh_token', data.refresh_token);
+      safeStorage.setItem('access_token', data.access_token);
+      safeStorage.setItem('refresh_token', data.refresh_token);
       setToken(data.access_token);
 
       if (data.user) {
@@ -59,18 +83,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    const refreshToken = localStorage.getItem('refresh_token');
+    const refreshToken = safeStorage.getItem('refresh_token');
     try {
       await authService.logout(refreshToken || undefined);
     } catch (e) {
       console.warn('Logout request failed or expired token');
     } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      safeStorage.removeItem('access_token');
+      safeStorage.removeItem('refresh_token');
       setUser(null);
       setToken(null);
     }
   };
+
 
   return (
     <AuthContext.Provider
