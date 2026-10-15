@@ -29,6 +29,7 @@ if sys.platform == "win32":
 
 ROOT_DIR = Path(__file__).resolve().parent
 STORAGE_DIR = ROOT_DIR / "storage"
+CERTS_DIR = ROOT_DIR / "certs"
 
 def get_local_ip() -> str:
     """Detect LAN / local network IP address of this machine."""
@@ -43,18 +44,64 @@ def get_local_ip() -> str:
     except Exception:
         return "127.0.0.1"
 
-def print_banner(frontend_port: int, backend_port: int, smtp_port: int):
+def ensure_ssl_certs(domain_name: str = ""):
+    """Verify SSL certificates exist in ./certs, or auto-generate self-signed certs."""
+    privkey_path = CERTS_DIR / "privkey.pem"
+    fullchain_path = CERTS_DIR / "fullchain.pem"
+    generate_script = ROOT_DIR / "scripts" / "generate_ssl.py"
+
+    if not privkey_path.exists() or not fullchain_path.exists():
+        print("[SSL] SSL certificates missing in ./certs/. Auto-generating self-signed certificate...")
+        cmd = [sys.executable, str(generate_script)]
+        if domain_name:
+            cmd.append(domain_name)
+        subprocess.run(cmd, cwd=str(ROOT_DIR), check=True)
+        print("[SSL] Self-signed certificate created successfully.")
+    elif domain_name:
+        try:
+            from cryptography import x509
+            with open(fullchain_path, "rb") as f:
+                cert = x509.load_pem_x509_certificate(f.read())
+            san_ext = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName)
+            sans = [str(x.value) for x in san_ext.value]
+            if domain_name not in sans:
+                print(f"[SSL] Updating SSL certificate to include domain: {domain_name}...")
+                subprocess.run([sys.executable, str(generate_script), domain_name], cwd=str(ROOT_DIR), check=True)
+        except Exception:
+            pass
+
+def print_banner(cfg: dict, is_ssl: bool = False, active_domain: str = ""):
     local_ip = get_local_ip()
+    db_port = cfg.get("db_port", 5433)
+    backend_port = cfg.get("backend_port", 8000)
+    smtp_port = cfg.get("smtp_port", 1025)
+    frontend_port = cfg.get("frontend_port", 3000)
+    http_port = cfg.get("http_port", 80)
+    https_port = cfg.get("https_port", 443)
     
     print("\n" + "=" * 76)
     print("  [NTC] NEPAL TELECOM CORPORATION")
     print("  Darta-Chalan Digitization System (दर्ता-चलानी डिजिटल प्रणाली)")
     print("=" * 76)
-    print("  * Deployment Mode    : Exclusively Docker Containerized")
-    print("  * Database           : PostgreSQL 16 (Container: ntc_digitization_db)")
-    print(f"  * Web Portal (Local) : http://localhost:{frontend_port}")
-    print(f"  * Web Portal (LAN)   : http://{local_ip}:{frontend_port}  <-- Share on office network")
-    print(f"  * REST API Docs      : http://localhost:{backend_port}/docs (or http://{local_ip}:{backend_port}/docs)")
+    
+    if is_ssl:
+        ssl_port_suffix = f":{https_port}" if https_port != 443 else ""
+        http_port_suffix = f":{http_port}" if http_port != 80 else ""
+        print("  * Deployment Mode    : Exclusively Docker (Secure HTTPS / TLS)")
+        print(f"  * Database           : PostgreSQL 16 (Container: ntc_digitization_db, Port: {db_port})")
+        print(f"  * Web Portal (Local) : https://localhost{ssl_port_suffix}")
+        print(f"  * Web Portal (LAN)   : https://{local_ip}{ssl_port_suffix}  <-- Share on office network")
+        if active_domain:
+            print(f"  * Web Portal (Domain): https://{active_domain}{ssl_port_suffix}  <-- Custom Domain")
+        print(f"  * HTTP Auto-Redirect : http://localhost{http_port_suffix} -> Redirects to HTTPS")
+        print(f"  * REST API Docs (LAN): https://{local_ip}{ssl_port_suffix}/docs")
+    else:
+        print("  * Deployment Mode    : Exclusively Docker Containerized (HTTP)")
+        print(f"  * Database           : PostgreSQL 16 (Container: ntc_digitization_db, Port: {db_port})")
+        print(f"  * Web Portal (Local) : http://localhost:{frontend_port}")
+        print(f"  * Web Portal (LAN)   : http://{local_ip}:{frontend_port}  <-- Share on office network")
+        print(f"  * REST API Docs (LAN): http://{local_ip}:{frontend_port}/docs (or http://{local_ip}:{backend_port}/docs)")
+
     print(f"  * SMTP Scanner Intake: smtp://{local_ip}:{smtp_port}")
     print("-" * 76)
     print("  Default System Administrator Credentials (Auto-Seeded):")
@@ -62,6 +109,10 @@ def print_banner(frontend_port: int, backend_port: int, smtp_port: int):
     print("     * Password : Admin@123456")
     print("     * Role     : SYSTEM_ADMIN")
     print("=" * 76)
+    if is_ssl:
+        print("  [SSL NOTE] Using self-signed SSL? If browser shows 'Not Secure', click")
+        print("             'Advanced' -> 'Proceed to localhost' to open the secure app.")
+        print("-" * 76)
     print("  Starting containers... Press Ctrl+C at any time to shut down gracefully.\n")
 
 def check_docker_available():
@@ -83,6 +134,21 @@ def check_docker_available():
             print("\n[ERROR] Docker Engine is not running!")
             print("Please open 'Docker Desktop' and wait until it indicates 'Engine running'.")
             sys.exit(1)
+
+        # On Windows, if repository is on a non-C drive (e.g. D:), ensure it is mounted in docker-desktop VM
+        if sys.platform == "win32":
+            drive = ROOT_DIR.drive
+            if drive and drive.upper() != "C:":
+                d_letter = drive.rstrip(":").lower()
+                try:
+                    subprocess.run(
+                        ["wsl", "-d", "docker-desktop", "-u", "root", "mount", "-t", "drvfs", f"{drive}", f"/mnt/host/{d_letter}"],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        check=False
+                    )
+                except Exception:
+                    pass
     except Exception as e:
         print(f"\n[ERROR] Could not communicate with Docker: {e}")
         sys.exit(1)
@@ -108,36 +174,50 @@ def ensure_env_and_dirs():
         except Exception:
             pass
 
-def read_ports_from_env():
-    """Read port mappings from .env file or default values."""
+def read_config_from_env():
+    """Read port mappings, SSL mode, and domain configuration from .env file."""
     env_file = ROOT_DIR / ".env"
-    frontend_port = 3000
-    backend_port = 8000
-    smtp_port = 1025
+    cfg = {
+        "frontend_port": 3000,
+        "backend_port": 8000,
+        "smtp_port": 1025,
+        "db_port": 5433,
+        "ssl_enabled": False,
+        "domain_name": "",
+        "http_port": 80,
+        "https_port": 443,
+    }
 
     if env_file.exists():
         try:
             with open(env_file, "r", encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
-                    if line.startswith("#"):
+                    if not line or line.startswith("#") or "=" not in line:
                         continue
-                    if line.startswith("FRONTEND_PORT="):
-                        val = line.split("=", 1)[1].strip().strip('"').strip("'")
-                        if val.isdigit():
-                            frontend_port = int(val)
-                    elif line.startswith("PORT="):
-                        val = line.split("=", 1)[1].strip().strip('"').strip("'")
-                        if val.isdigit():
-                            backend_port = int(val)
-                    elif line.startswith("SMTP_SCANNER_PORT="):
-                        val = line.split("=", 1)[1].strip().strip('"').strip("'")
-                        if val.isdigit():
-                            smtp_port = int(val)
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip().strip('"').strip("'")
+                    if key == "FRONTEND_PORT" and val.isdigit():
+                        cfg["frontend_port"] = int(val)
+                    elif key == "PORT" and val.isdigit():
+                        cfg["backend_port"] = int(val)
+                    elif key == "SMTP_SCANNER_PORT" and val.isdigit():
+                        cfg["smtp_port"] = int(val)
+                    elif key == "DB_PORT" and val.isdigit():
+                        cfg["db_port"] = int(val)
+                    elif key == "SSL_ENABLED":
+                        cfg["ssl_enabled"] = val.lower() in ("true", "1", "yes", "on")
+                    elif key == "DOMAIN_NAME":
+                        cfg["domain_name"] = val
+                    elif key == "HTTP_PORT" and val.isdigit():
+                        cfg["http_port"] = int(val)
+                    elif key == "HTTPS_PORT" and val.isdigit():
+                        cfg["https_port"] = int(val)
         except Exception:
             pass
 
-    return frontend_port, backend_port, smtp_port
+    return cfg
 
 def open_browser_delayed(url: str, delay: float = 3.5):
     """Open web browser in background after container startup."""
@@ -158,6 +238,8 @@ def main():
     parser.add_argument("--no-build", action="store_true", help="Start containers without rebuilding images")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open web browser")
     parser.add_argument("--detach", "-d", action="store_true", help="Run containers in background")
+    parser.add_argument("--ssl", "--https", action="store_true", help="Enable secure HTTPS/SSL mode (ports 80 & 443)")
+    parser.add_argument("--domain", type=str, default="", help="Custom domain name (e.g. darta.ntc.net.np or darta.local)")
 
     args = parser.parse_args()
 
@@ -167,31 +249,52 @@ def main():
     # 2. Verify environment files and storage
     ensure_env_and_dirs()
 
-    # 3. Read configured ports
-    frontend_port, backend_port, smtp_port = read_ports_from_env()
+    # 3. Read configured settings
+    cfg = read_config_from_env()
 
-    # Handle --down
+    # Determine SSL mode and domain name (CLI flag overrides .env)
+    is_ssl = args.ssl or cfg["ssl_enabled"]
+    active_domain = (args.domain or cfg["domain_name"]).strip()
+
+    compose_files = ["-f", "docker-compose.public.yml"] if is_ssl else ["-f", "docker-compose.yml"]
+
+    # Handle --down (stops both standard and SSL compose stacks cleanly)
     if args.down:
         print("[DOCKER] Stopping all Darta-Chalan containers...")
-        subprocess.run(["docker", "compose", "down"], cwd=str(ROOT_DIR))
+        subprocess.run(["docker", "compose", "-f", "docker-compose.yml", "-f", "docker-compose.public.yml", "down"], cwd=str(ROOT_DIR))
         print("[SUCCESS] Containers stopped.")
         return
 
     # Handle --logs
     if args.logs:
         print("[DOCKER] Tailing container logs (Ctrl+C to exit)...")
-        subprocess.run(["docker", "compose", "logs", "-f"], cwd=str(ROOT_DIR))
+        subprocess.run(["docker", "compose", *compose_files, "logs", "-f"], cwd=str(ROOT_DIR))
         return
 
+    # If SSL is enabled, ensure certificates are ready and set domain environment
+    if is_ssl:
+        ensure_ssl_certs(active_domain)
+        if active_domain:
+            os.environ["DOMAIN_NAME"] = active_domain
+
     # 4. Print user-friendly banner
-    print_banner(frontend_port, backend_port, smtp_port)
+    print_banner(cfg, is_ssl, active_domain)
 
     # 5. Open browser automatically
     if not args.no_browser and not args.detach:
-        open_browser_delayed(f"http://localhost:{frontend_port}")
+        if is_ssl:
+            https_port = cfg["https_port"]
+            port_suffix = f":{https_port}" if https_port != 443 else ""
+            if active_domain and active_domain != "localhost":
+                browser_url = f"https://{active_domain}{port_suffix}"
+            else:
+                browser_url = f"https://localhost{port_suffix}"
+        else:
+            browser_url = f"http://localhost:{cfg['frontend_port']}"
+        open_browser_delayed(browser_url)
 
     # 6. Build command
-    cmd = ["docker", "compose", "up"]
+    cmd = ["docker", "compose", *compose_files, "up"]
     if not args.no_build:
         cmd.append("--build")
     if args.detach:
@@ -203,7 +306,7 @@ def main():
         print("\n" + "=" * 76)
         print("  [SHUTDOWN] Stopping all Docker containers safely...")
         print("=" * 76)
-        subprocess.run(["docker", "compose", "down"], cwd=str(ROOT_DIR))
+        subprocess.run(["docker", "compose", "-f", "docker-compose.yml", "-f", "docker-compose.public.yml", "down"], cwd=str(ROOT_DIR))
         print("  [SUCCESS] All services stopped cleanly.\n")
     except subprocess.CalledProcessError as e:
         print(f"\n[ERROR] Docker Compose exited with error: {e}")
